@@ -345,8 +345,15 @@ func (tf *TorrentFSEntry) pieceFromOffset(offset int64) (int, int) {
 func (tf *TorrentFSEntry) ReaderPiecesRange() (ret PieceRange) {
 	pos, _ := tf.Pos()
 	ra := tf.Readahead()
+	offset := tf.torrentOffset(pos)
 
-	return tf.byteRegionPieces(tf.torrentOffset(pos), ra)
+	if tf.t != nil && tf.t.IsMemoryStorage() {
+		behind := ra / 2
+		start := offset - behind
+		return tf.byteRegionPieces(start, ra)
+	}
+
+	return tf.byteRegionPieces(offset, ra)
 }
 
 // Readahead returns current reader readahead
