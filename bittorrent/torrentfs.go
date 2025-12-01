@@ -347,8 +347,18 @@ func (tf *TorrentFSEntry) ReaderPiecesRange() (ret PieceRange) {
 	ra := tf.Readahead()
 	offset := tf.torrentOffset(pos)
 
-	if tf.t != nil && tf.t.IsMemoryStorage() {
-		behind := ra / 2
+	if tf.t != nil && tf.t.IsMemoryStorage() && ra > 0 {
+		backwardPercent := config.BackwardWindowPercentMin
+		if cfg := config.Get(); cfg != nil && cfg.BackwardWindowPercent > 0 {
+			backwardPercent = cfg.BackwardWindowPercent
+		}
+		if backwardPercent < config.BackwardWindowPercentMin {
+			backwardPercent = config.BackwardWindowPercentMin
+		} else if backwardPercent > config.BackwardWindowPercentMax {
+			backwardPercent = config.BackwardWindowPercentMax
+		}
+
+		behind := ra * int64(backwardPercent) / 100
 		start := offset - behind
 		return tf.byteRegionPieces(start, ra)
 	}

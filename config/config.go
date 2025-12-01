@@ -38,6 +38,11 @@ const (
 	defaultTraktSyncFrequencyMin = 5
 	defaultEndBufferSize         = 1 * 1024 * 1024
 	defaultDiskCacheSize         = 12 * 1024 * 1024
+	// BackwardWindowPercentMin bounds the minimum percent of reader window kept behind playback.
+	BackwardWindowPercentMin = 20
+	// BackwardWindowPercentMax bounds the maximum percent of reader window kept behind playback.
+	BackwardWindowPercentMax     = 50
+	defaultBackwardWindowPercent = 20
 
 	// TraktReadClientID ...
 	TraktReadClientID = "eb8839a79fb2af4ebfb93f993a8a539abd4d9674a7638497bbc662d2a4b22346"
@@ -116,6 +121,7 @@ type Configuration struct {
 	AutoMemorySize              bool
 	AutoKodiBufferSize          bool
 	AutoAdjustMemorySize        bool
+	BackwardWindowPercent       int
 	AutoMemorySizeStrategy      int
 	MemorySize                  int
 	AutoAdjustBufferSize        bool
@@ -616,6 +622,7 @@ func Reload() (ret *Configuration, err error) {
 		SkipRepositorySearch:        settings.ToBool("skip_repository_search"),
 		AutoMemorySize:              settings.ToBool("auto_memory_size"),
 		AutoAdjustMemorySize:        settings.ToBool("auto_adjust_memory_size"),
+		BackwardWindowPercent:       clampBackwardWindowPercent(settings.ToInt("memory_backward_percent")),
 		AutoMemorySizeStrategy:      settings.ToInt("auto_memory_size_strategy"),
 		MemorySize:                  settings.ToInt("memory_size") * 1024 * 1024,
 		AutoKodiBufferSize:          settings.ToBool("auto_kodi_buffer_size"),
@@ -1054,6 +1061,21 @@ func updateLoggingLevel(level int) {
 		logging.SetLevel(logging.DEBUG, "")
 	}
 
+}
+
+func clampBackwardWindowPercent(p int) int {
+	if p == 0 {
+		return defaultBackwardWindowPercent
+	}
+
+	if p < BackwardWindowPercentMin {
+		return BackwardWindowPercentMin
+	}
+	if p > BackwardWindowPercentMax {
+		return BackwardWindowPercentMax
+	}
+
+	return p
 }
 
 func (s *XbmcSettings) ToString(key string) (ret string) {
