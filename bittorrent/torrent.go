@@ -653,21 +653,32 @@ func (t *Torrent) PrioritizePieces() {
 	t.muAwaitingPieces.RLock()
 	for _, r := range t.readers {
 		pr := r.ReaderPiecesRange()
+
+		// Find the current piece index for this reader
+		readerPos, _ := r.Pos()
+		pieceAtCurrentPlaybackPosition, _ := r.pieceFromOffset(readerPos)
+
 		log.Debugf("Reader range: %+v, last: %s", pr, r.lastUsed.Format(time.RFC3339))
 
 		for curPiece := pr.Begin; curPiece <= pr.End; curPiece++ {
 			if t.awaitingPieces.ContainsInt(curPiece) {
 				readerPieces[curPiece] = 7
 			} else {
-				pos := curPiece - pr.Begin
+				distance := curPiece - pieceAtCurrentPlaybackPosition
+				if distance < 0 {
+					distance = -distance
+				}
+
 				switch {
-				case pos <= 0:
+				case distance == 0:
+					// Piece containing current playback position
 					readerPieces[curPiece] = 6
-				case pos <= 2:
+				case distance <= 2:
+					// Immediate neighbours (forward & backward)
 					readerPieces[curPiece] = 5
-				case pos <= 5:
+				case distance <= 5:
 					readerPieces[curPiece] = 4
-				case pos <= 9:
+				case distance <= 9:
 					readerPieces[curPiece] = 3
 				default:
 					readerPieces[curPiece] = 2
