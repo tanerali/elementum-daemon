@@ -1,0 +1,55 @@
+name: manual-build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_target:
+        description: 'Which platforms to build and push'
+        required: true
+        default: android-all-and-darwin-x64
+        type: choice
+        options:
+          - android-all-and-darwin-x64
+          - android-all
+          - darwin-x64
+          - all-platforms
+
+jobs:
+  build-and-push:
+    runs-on: self-hosted
+    env:
+      GH_USER: ${{ secrets.GH_USER }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build selected platforms
+        run: |
+          case "${{ github.event.inputs.build_target }}" in
+            android-all-and-darwin-x64)
+              make android-arm android-arm-shared \
+                   android-arm64 android-arm64-shared \
+                   android-x64 android-x64-shared \
+                   android-x86 android-x86-shared \
+                   darwin-x64
+              ;;
+            android-all)
+              make android-arm android-arm-shared \
+                   android-arm64 android-arm64-shared \
+                   android-x64 android-x64-shared \
+                   android-x86 android-x86-shared
+              ;;
+            darwin-x64)
+              make darwin-x64
+              ;;
+            all-platforms)
+              make all
+              ;;
+          esac
+
+      - name: Push binaries to fork
+        run: ./push-binaries.sh
+
+
