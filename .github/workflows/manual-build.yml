@@ -16,7 +16,7 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     env:
       GH_USER: ${{ secrets.GH_USER }}
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
