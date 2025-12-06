@@ -1,10 +1,10 @@
-name: build-binaries
+name: manual-build-and-push
 
 on:
   workflow_dispatch:
     inputs:
       build_target:
-        description: 'Which platforms to build'
+        description: 'Which platforms to build and push'
         required: true
         default: android-all-and-darwin-x64
         type: choice
@@ -15,12 +15,32 @@ on:
           - all-platforms
 
 jobs:
-  build:
-    runs-on: self-hosted   # or ubuntu-latest if your cross-compile setup supports it
+  build-and-push:
+    runs-on: ubuntu-latest
+    env:
+      GH_USER: ${{ secrets.GH_USER }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Go (for go env only)
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.x'
+
+      - name: Prepare Go env for Docker build
+        run: |
+          GOPATH="$(go env GOPATH)"
+          GOCACHE="$(go env GOCACHE)"
+          mkdir -p "$GOPATH" "$GOCACHE"
+          echo "GOPATH=$GOPATH" >> "$GITHUB_ENV"
+          echo "GOCACHE=$GOCACHE" >> "$GITHUB_ENV"
+
+      - name: Fetch tags (for GIT_VERSION)
+        run: |
+          git fetch --tags --prune --unshallow || git fetch --tags
 
       - name: Build selected platforms
         run: |
@@ -46,8 +66,5 @@ jobs:
               ;;
           esac
 
-      - name: Upload build directory as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: elementum-build-${{ github.event.inputs.build_target }}
-          path: build/
+      - name: Push binaries to fork
+        run: ./push-binaries.sh
